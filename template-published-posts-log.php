@@ -3,9 +3,8 @@
 Template Name: Published Posts Log
 */
 
-// Check if the current user is an administrator
+// Redirect user to home page if they are not an administrator
 if (!current_user_can('administrator')) :
-  // Redirect user to home page
   wp_redirect(home_url());
   exit;
 endif;
@@ -14,7 +13,6 @@ get_header();
 
 global $wpdb;
 $table_name = $wpdb->prefix . 'published_posts_log';
-
 $data = null;
 
 // get post_id from get parameter and sanitize it

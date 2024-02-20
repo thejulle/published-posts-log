@@ -36,39 +36,38 @@ register_activation_hook(__FILE__, 'published_posts_log_create_table');
 // Save various post information to custom table when post is published
 function published_posts_log_save_post($ID, $post) {
   if ($post->post_type === 'post' && $post->post_status === 'publish') {
-    global $wpdb;
-    $table_name = $wpdb->prefix . 'published_posts_log';
-
     // Check if the post has been processed before
     $processed_before = get_post_meta($ID, '_published_posts_log_processed', true);
 
     if ($processed_before) :
       return;
-    else :
-      $post_id = $ID;
-      $post_title = $post->post_title;
-      $post_content = $post->post_content;
-      $post_author = $post->post_author;
-      $published_by = $post->post_modified_by;
-      $publish_date = $post->post_date;
-      $categories = implode(',', wp_get_post_categories($post_id));
-      
-      $wpdb->insert(
-        $table_name,
-        [
-          'post_id' => $post_id,
-          'post_title' => $post_title,
-          'post_content' => $post_content,
-          'post_author' => $post_author,
-          'published_by' => $published_by,
-          'publish_date' => $publish_date,
-          'categories' => $categories,
-        ]
-      );
-
-      // Set metadata to indicate that the post has been processed
-      update_post_meta($ID, '_published_posts_log_processed', true);
     endif;
+
+    global $wpdb;
+    $table_name = $wpdb->prefix . 'published_posts_log';
+    $post_id = $ID;
+    $post_title = $post->post_title;
+    $post_content = $post->post_content;
+    $post_author = $post->post_author;
+    $published_by = $post->post_modified_by;
+    $publish_date = $post->post_date;
+    $categories = implode(',', wp_get_post_categories($post_id));
+    
+    $wpdb->insert(
+      $table_name,
+      [
+        'post_id' => $post_id,
+        'post_title' => $post_title,
+        'post_content' => $post_content,
+        'post_author' => $post_author,
+        'published_by' => $published_by,
+        'publish_date' => $publish_date,
+        'categories' => $categories,
+      ]
+    );
+
+    // Set metadata to indicate that the post has been processed
+    update_post_meta($ID, '_published_posts_log_processed', true);
   }
 }
 add_action('publish_post', 'published_posts_log_save_post', 10, 2);
