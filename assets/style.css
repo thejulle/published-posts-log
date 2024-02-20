@@ -1,0 +1,31 @@
+.published-posts-log {
+  /* max-width: 1400px; */
+  margin: 0 auto;
+  padding: 3rem 1rem;
+  text-align: center;
+}
+
+.published-posts-log h1 {
+  margin-bottom: .75em;
+}
+
+.published-posts-log form {
+  margin-bottom: 2em;
+}
+
+table {
+  margin: 0 auto 3rem;
+  font-size: 16px;
+}
+
+table, th, td {
+  border: 1px solid black;
+}
+
+th, td {
+  padding: .5rem;
+}
+
+.published-posts-log__post-content {
+  text-align: left
+}
