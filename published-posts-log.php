@@ -17,14 +17,14 @@ function published_posts_log_create_table() {
   $charset_collate = $wpdb->get_charset_collate();
   
   $sql = "CREATE TABLE $table_name (
-    id mediumint(9) NOT NULL AUTO_INCREMENT,
-    post_id bigint(20) NOT NULL,
+    id int NOT NULL AUTO_INCREMENT,
+    post_id int NOT NULL,
     post_title text NOT NULL,
     post_content longtext NOT NULL,
-    post_author varchar(255) NOT NULL,
-    published_by varchar(255) NOT NULL,
+    post_author int NOT NULL,
+    published_by int NOT NULL, 
     publish_date datetime NOT NULL,
-    categories text NOT NULL,
+    categories varchar(255) NOT NULL,
     PRIMARY KEY (id)
     ) $charset_collate;";
     
@@ -33,72 +33,79 @@ function published_posts_log_create_table() {
 }
 register_activation_hook(__FILE__, 'published_posts_log_create_table');
   
-// Save various post information to custom table when post is published
-function published_posts_log_save_post($ID, $post) {
-  if ($post->post_type === 'post' && $post->post_status === 'publish') {
-    // Check if the post has been processed before
-    $processed_before = get_post_meta($ID, '_published_posts_log_processed', true);
+// Save various post information to custom table after post is saved to database
+function published_posts_log_after_insert_post($post_id, $post, $update, $post_before) {
 
-    if ($processed_before) :
-      return;
-    endif;
+  // Check that post type is post and post status is publish
+  if ($post->post_type !== 'post' || $post->post_status !== 'publish') :
+    return;
+  endif;
+  
+  global $wpdb;
+  $table_name = $wpdb->prefix . 'published_posts_log';
 
-    global $wpdb;
-    $table_name = $wpdb->prefix . 'published_posts_log';
-    $post_id = $ID;
-    $post_title = $post->post_title;
-    $post_content = $post->post_content;
-    $post_author = $post->post_author;
-    $published_by = $post->post_modified_by;
-    $publish_date = $post->post_date;
-    $categories = implode(',', wp_get_post_categories($post_id));
-    
-    $wpdb->insert(
-      $table_name,
-      [
-        'post_id' => $post_id,
-        'post_title' => $post_title,
-        'post_content' => $post_content,
-        'post_author' => $post_author,
-        'published_by' => $published_by,
-        'publish_date' => $publish_date,
-        'categories' => $categories,
-      ]
-    );
+  // Check if the post exists in the table already
+  $post_in_table = $wpdb->get_row("SELECT * FROM $table_name WHERE post_id = $post->ID");
 
-    // Set metadata to indicate that the post has been processed
-    update_post_meta($ID, '_published_posts_log_processed', true);
-  }
+  if ($post_in_table) :
+    return;
+  endif;
+  
+  // Sanitize and prepare data
+  $post_data = [
+    'post_id' => $post->ID,
+    'post_title' => $post->post_title,
+    'post_content' => $post->post_content,
+    'post_author' => $post->post_author,
+    'published_by' => get_current_user_id(),
+    'publish_date' => $post->post_date,
+    'categories' => implode(',', wp_get_post_categories($post->ID)),
+  ];
+
+  // Define the data formats
+  $data_formats = [
+    '%d', // post_id (int)
+    '%s', // post_title (string)
+    '%s', // post_content (string)
+    '%d', // post_author (int)
+    '%d', // published_by (int)
+    '%s', // publish_date (string)
+    '%s'  // categories (string)
+  ];
+
+  // Insert data into custom table
+  $wpdb->insert(
+    $table_name,
+    $post_data,
+    $data_formats
+  );
+
+  // Check for errors
+  if ($wpdb->last_error) :
+    // Handle error
+    error_log('Error inserting post data: ' . $wpdb->last_error);
+  endif;
 }
-add_action('publish_post', 'published_posts_log_save_post', 10, 2);
+add_action('wp_after_insert_post', 'published_posts_log_after_insert_post', 10, 4);
     
 // Register custom page template
 function published_posts_log_register_template($templates) {
-  $templates['published-posts-log-template.php'] = 'Published Posts Log';
+  $templates['template-published-posts-log.php'] = 'Published Posts Log';
   return $templates;
 }
 add_filter('theme_page_templates', 'published_posts_log_register_template');
     
-// Load template based on user's choice
+// Define path to template file inside plugin directory
 function published_posts_log_load_template($template) {
-  global $post;
-  
-  if (!empty($post->post_template) && file_exists(get_template_directory() . '/' . $post->post_template)) {
-    return $template;
+  if (is_page_template('template-published-posts-log.php')) {
+    $template = plugin_dir_path(__FILE__) . 'template-published-posts-log.php';
   }
-  
-  $template_name = get_post_meta($post->ID, '_wp_page_template', true);
-  
-  if (!empty($template_name) && 'published-posts-log-template.php' === $template_name) {
-    return plugin_dir_path(__FILE__) . 'template-published-posts-log.php';
-  }
-  
   return $template;
 }
-add_filter('template_include', 'published_posts_log_load_template');
+add_filter('page_template', 'published_posts_log_load_template');
 
 // Enqueue stylesheet
 function published_posts_log_enqueue_styles() {
-  wp_enqueue_style('published-posts-log-style', plugin_dir_url(__FILE__) . 'assets/style.css');
+  wp_enqueue_style('published-posts-log-style', plugin_dir_url(__FILE__) . 'assets/style.css', [], filemtime(plugin_dir_path(__FILE__) . 'assets/style.css'));
 }
 add_action('wp_enqueue_scripts', 'published_posts_log_enqueue_styles');
