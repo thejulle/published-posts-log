@@ -51,7 +51,7 @@ function published_posts_log_after_insert_post($post_id, $post, $update, $post_b
     return;
   endif;
   
-  // Sanitize and prepare data
+  // Setup post data in array
   $post_data = [
     'post_id' => $post->ID,
     'post_title' => $post->post_title,
