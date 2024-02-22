@@ -36,11 +36,21 @@ register_activation_hook(__FILE__, 'published_posts_log_create_table');
 // Save various post information to custom table after post is saved to database
 function published_posts_log_after_insert_post($post_id, $post, $update, $post_before) {
 
-  // Check that post type is post and post status is publish
-  if ($post->post_type !== 'post' || $post->post_status !== 'publish') :
+  // Check that post type is post
+  if ($post->post_type !== 'post') :
     return;
   endif;
-  
+
+  // Check that post status is publish
+  if ($post->post_status !== 'publish') :
+    return;
+  endif;
+
+  // Check if the post was already published
+  if ($post_before && $post_before->post_status === 'publish') :
+    return;
+  endif;
+
   global $wpdb;
   $table_name = $wpdb->prefix . 'published_posts_log';
 
